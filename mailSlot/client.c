@@ -4,18 +4,23 @@
 #include <string.h>
 
 #include "tictactoe.h"
+#include "malesluts.h"
 
 int main() {
-	HANDLE fifo1, fifo2;
+	HANDLE s2c, c2s;
 	DWORD x;
 	int status = 0,row,column;
 	int m[3][3];
 
+	// s2c = CreateMaleSlut(TEXT("\\\\.\\mailslot\\c2s"));
+	c2s = ConnectMaleSlut(TEXT("\\\\.\\mailslot\\c2s"));
+	s2c = CreateMaleSlut(TEXT("\\\\.\\mailslot\\s2c"));
 	printf("I am the client, marked with '2' \n");
 
+	
 	// connecting to pipes created by server
-	fifo1 = CreateFile(TEXT("\\\\.\\PIPE\\s2c"), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NMPWAIT_WAIT_FOREVER, NULL);
-	fifo2 = CreateFile(TEXT("\\\\.\\PIPE\\c2s"), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NMPWAIT_WAIT_FOREVER, NULL);
+	// msg1 = CreateFile(TEXT("\\\\.\\PIPE\\c2s"), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NMPWAIT_WAIT_FOREVER, NULL);
+	// msg2 = CreateFile(TEXT("\\\\.\\PIPE\\s2c"), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NMPWAIT_WAIT_FOREVER, NULL);
 	
 	start_game(m);
 
@@ -27,7 +32,7 @@ int main() {
 		scanf("%d",&column);
 		mark(m,row,column,2);
 		// writes to server
-		if (WriteFile(fifo1, m, sizeof(m), &x, NULL)==0) {
+		if (WriteFile(c2s, m, sizeof(m), &x, NULL)==0) {
 			printf("writing error..%d\n", x);
 		}
 		print_game(m);
@@ -37,7 +42,7 @@ int main() {
 
 		printf("Waiting for server's move...\n");
 		// writes to client
-		if (ReadFile(fifo2, m, sizeof(m), &x, NULL)==0) {
+		if (ReadFile(s2c, m, sizeof(m), &x, NULL)==0) {
 			printf("reading error.. %d\n", x);
 		}
 		print_game(m);
@@ -51,6 +56,6 @@ int main() {
 			else printf("It's a tie!\n");
 
 	// closing pipes
-	CloseHandle(fifo1);
-	CloseHandle(fifo2);
+	CloseHandle(s2c);
+	CloseHandle(c2s);
 }

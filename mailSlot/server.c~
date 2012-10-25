@@ -4,28 +4,28 @@
 #include <string.h>
 
 #include "tictactoe.h"
-#include "malesluts.h"
 
 int main() {
-	HANDLE c2s, s2c;
-	DWORD x, cbMessage, cMessage, cbRead, dwRet;
+	HANDLE fifo1, fifo2;
+	DWORD x;
 	int status = 0,row,column;
 	int m[3][3];
+	
 	start_game(m);
 	printf("Waiting for a client to connect...\n");
 
-	// creating mailslots
-	// msg2 = CreateMailslot(TEXT("\\\\.\\mailslot\\c2s"), 0, MAILSLOT_WAIT_FOREVER, NULL);
-	c2s = CreateMaleSlut(TEXT("\\\\.\\mailslot\\c2s"));
-	// msg2 = CreateFile(TEXT("\\\\.\\PIPE\\c2s"), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NMPWAIT_WAIT_FOREVER, NULL);
-	s2c = ConnectMaleSlut(TEXT("\\\\.\\mailslot\\s2c"));
+	// creating pipes
+	fifo1 = CreateNamedPipe(TEXT("\\\\.\\PIPE\\s2c"), PIPE_ACCESS_INBOUND,PIPE_TYPE_BYTE|PIPE_WAIT, 3, 0, 0, NMPWAIT_WAIT_FOREVER, NULL);
+	fifo2 = CreateNamedPipe(TEXT("\\\\.\\PIPE\\c2s"), PIPE_ACCESS_OUTBOUND,PIPE_TYPE_BYTE|PIPE_WAIT, 3, 0, 0, NMPWAIT_WAIT_FOREVER, NULL);
+	ConnectNamedPipe(fifo1, NULL);
+	ConnectNamedPipe(fifo2, NULL);
 
 	printf("I am the server, marked with '1'\n");
 
 	while (1) {
-		//reads from client
+		// reads from client
 		printf("Waiting for client's move...\n");
-		if (ReadFile(c2s, m, sizeof(m), &x, NULL)==0) {
+		if (ReadFile(fifo1, m, sizeof(m), &x, NULL)==0) {
 			printf("reading error.. %d\n", x);
 		}
 		print_game(m);
@@ -39,7 +39,7 @@ int main() {
 		scanf("%d",&column);
 		mark(m,row,column,1);
 		// writes to client
-		if (WriteFile(s2c, m, sizeof(m), &x, NULL)==0) {
+		if (WriteFile(fifo2, m, sizeof(m), &x, NULL)==0) {
 			printf("writing error..%d\n", x);
 		}
 		print_game(m);
@@ -51,12 +51,12 @@ int main() {
 	if (status == 1) printf("\nCongratulions! You won! \n");
 		else if (status == 2) printf("\nThe client won! \n");
 			else printf("It's a tie!\n");
-
+	
 	// closing connections
-	// DisconnectNamedPipe(c2s);
-	// DisconnectNamedPipe(s2c);
+	DisconnectNamedPipe(fifo1);
+	DisconnectNamedPipe(fifo2);
 	// closing pipes
-	CloseHandle(c2s);
-	CloseHandle(s2c);
+	CloseHandle(fifo1);
+	CloseHandle(fifo2);
 
 }
