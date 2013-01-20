@@ -30,28 +30,30 @@ void add(list* l, int value, int worker) {
 }
 
 int delete_value(list* l, int value) {
-	int ok = 1;
 	elem* p = l->head, *prev = NULL;
-	while (p->next) {
+	while (p!=NULL) {
 		if (p->value <= value) {
-			ok = 0;
-			break;
+				if(p==l->head){
+				l->head=p->next;
+				free(p);
+				l->size=l->size-1;
+				return 1;
+			} else {
+				prev->next=p->next;
+				free(p);
+				l->size=l->size-1;
+				return 1;
+			}
+		} else {
+			prev=p;
+			p=p->next;
 		}
-		prev = p;
-		p = p->next;
 	}
-	if(!prev) {
-		l->head = l->head->next;
-	} else {
-		prev->next = p->next;
-	}
-	free(p);
-	l->size = l->size-1;
-	return ok;
+	return 0;
 }
 
 void delete_all(list* l, int value) {
-	while(!delete_value(l,value)) {}
+	while(delete_value(l,value)) {}
 }
 
 void generate_all(list* l, int size, int workers) {
