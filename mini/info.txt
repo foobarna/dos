@@ -1,0 +1,96 @@
+Write a mini bit-torrent system following the simplified specification below.
+The system will have three types of processes: hub, node, and client.
+
+Hub
+---
+The hub is unique (a single process) and must start first.
+
+    Command: ./hub
+
+Node
+----
+There will be multiple node processes (at most 10). Upon startup, each node
+will send a registration message to the hub, and then it will wait for client
+connections. Each node will have a directory with files which it will send to
+the clients (upon request). All nodes will have the same files.
+
+    Command: ./node <hub-ip> <hub-port> <data-dir>
+
+Client
+------
+There will be multiple client processes. Each client will download a file from
+the nodes, downloading in parallel different chunks of the file (100 byts in
+size) from each node. Upon startup, the client will connect to the hub and
+will request the list of nodes. Then it will connect to all nodes
+simultaneously (one thread for each node) and it will request a  different file
+chunk. Upon receiving the data the client will write it in the result file at
+the desired position.
+
+    Command: ./client <hub-ip> <hub-port> <file-name>
+
+Message types
+-------------
+Below are the message types that are used int he system. Each message will
+start with a byte defining its type (the mtype variable in the struct).
+
+Registration:
+  - Sent from the node to the hub
+  - mtype = 1
+  - rvport = the rendezvous port of the node (the port on which it accepts
+             connections from the client)
+
+    struct msgreg_t {
+        char mtype;
+        short rvport;
+    };
+
+Node list request:
+  - Send by the clients to the hub
+  - mtype = 2
+
+    struct msggetnod_t {
+        char mtype;
+    };
+
+Node list:
+  - Send by the hub to the requesting client
+  - mtype = 3
+
+    struct msgnodlst_t {
+        char mtype;
+        struct sockaddr_in addr[10];
+    };
+
+Get file chunk:
+  - Sent by the client to the node
+  - mtype = 4
+
+    struct msggetfile_t {
+        char mtype;
+        char filename[100];
+        long from;
+    }
+
+File data:
+  - Send by the node to the requesting client
+  - mtype = 5
+  - The variable length contains the effective number of byts sent int he
+    buffer. If the requested chunk is outside the file, length will be zero.
+
+    struct msggetfile_t {
+        char mtype;
+        char data[100];
+        int length;
+    }
+
+Comments
+--------
+  - The files will be open in binary mode
+  - To read a certain file chunk (in the node process) use lseek/read or
+    fseek/fread
+  - To write a certain file chunk (in the client process) use lseek/write or
+    fseek/fwrite. Even if the file is empty and you want to write to position
+    100, the system will extend the file automatically.
+  - The message swill the sent and received in two steps
+      - Read/write the message length
+      - Read/write the message data based on the length above
